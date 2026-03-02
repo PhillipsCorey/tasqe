@@ -19,7 +19,7 @@ const todoPlaintextPrompt =
             The hierarchy is 'section', 'task', 'subtask'.
             
             Sections should be broad, overarching ideas such as "health" "academics" "work" "doctors" "extracurriculars" "shopping" "family", they are very broad.
-            Consider each task a larger object, and break down tasks into smaller, manageable subtasks.
+            Only produce subtasks for tasks that are large and reasonably complex; there is no need to list trivial subtasks.
 
             Tasks are individual items, like "do homework" or "finish assignment".
             [TASK NAME] - [DUE DATE] - [EST TIME] - Description: [DESCRIPTION]
@@ -64,8 +64,20 @@ async function getApiKey() {
   });
 }
 
-export async function todoPlaintext(userQuery) {
+export async function todoPlaintext(userQuery, currList, complex) {
   const apiKey = await getApiKey();
+  let prompt = todoPlaintextPrompt;
+  let targetModel = "gpt-oss-120b"
+  let effort = "high"
+
+  if (currList !== undefined) {
+    prompt = prompt + `further context, the current user's list is ${JSON.stringify(currList)}. Aim to generate a list that combines this context with what the user is saying, to create one list that is the sum of both lists. Prioritize grouping similar sections where possible.`
+  }
+
+  if (!complex){
+    targetModel = "gpt-oss-20b"
+    effort = "medium"
+  }
 
   const response = await fetch(
     "https://api.ai.it.ufl.edu/v1/chat/completions",
@@ -76,11 +88,11 @@ export async function todoPlaintext(userQuery) {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-oss-120b",
+        model: targetModel,
         messages: [
           {
             role: "system",
-            content: todoPlaintextPrompt,
+            content: prompt
           },
           {
             role: "user",
@@ -88,7 +100,7 @@ export async function todoPlaintext(userQuery) {
           },
         ],
         verbosity: "low",
-        reasoning_effort: "high",
+        reasoning_effort: effort,
         temperature: 0.2
       }),
     }
