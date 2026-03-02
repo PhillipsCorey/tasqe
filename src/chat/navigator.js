@@ -27,8 +27,7 @@ const todoPlaintextPrompt =
             Subtasks are the steps to complete a task.
             [SUBTASK NAME] - [EST TIME]
             
-            Give time estimations to both tasks and subtasks.
-            Give due dates to tasks. Do NOT give due dates to subtasks.
+            Give due dates and time estimations to tasks. Do NOT give due dates and time estimations to subtasks.
             Output only plain markdown bulleted lists, do NOT use html tags for formatting, emojis, or asterisks/latex/any other special features.
             Print out only the list, nothing else. Do not add extraneous text at the beginning or end, nor talk to the user.
             For context, the current date is ${formatted}.`
