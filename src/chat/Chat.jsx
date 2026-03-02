@@ -91,6 +91,15 @@ export default function Chat() {
   const handleSend = async () => {
     if (!query.trim()) return;
 
+    const isListSelected = selectedList !== "";
+
+    let ctx_list;
+
+    if (isListSelected) {
+      const { todoData } = await chrome.storage.local.get("todoData");
+      ctx_list = todoData?.[selectedList];
+    }
+
     if (isInjectionLike(query)) {
       setHeroText("Nice try.");
       return;
@@ -102,7 +111,7 @@ export default function Chat() {
 
     setHeroText("Processing your word vomit...");
 
-    const responsePlaintext = await todoPlaintext(query);
+    const responsePlaintext = await todoPlaintext(query, ctx_list, contextToggle);
     const outputPlaintext = responsePlaintext.choices[0].message.content;
 
     setHeroText("Dang bro this week sucks...");
