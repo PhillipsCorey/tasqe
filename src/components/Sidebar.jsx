@@ -3,7 +3,7 @@ import { Plus, Search, Settings } from "lucide-react";
 import ListRowItem from "./ListRowItem";
 
 
-export default function Sidebar({ onSelectList, onSelectNewList }) {
+export default function Sidebar({ onSelectList, onSelectNewList, onOpenPreferences  }) {
   const [allLists, setAllLists] = useState({});
   const [favorites, setFavorites] = useState(new Set());
   const [hoveredList, setHoveredList] = useState(null);
@@ -141,7 +141,7 @@ export default function Sidebar({ onSelectList, onSelectNewList }) {
   // Open preferences //
   //////////////////////
   const handlePreferences = () => {
-    console.log("Open preferences");
+    onOpenPreferences?.();
   };
 
 

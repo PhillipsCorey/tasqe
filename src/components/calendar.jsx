@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, ChevronDown, ChevronRight, CheckSquare, Square, Clock, Calendar } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, CheckSquare, Square, Clock, Calendar, Trash2 } from "lucide-react";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -31,6 +31,14 @@ function sameDay(a, b) {
 function startOfWeek(date) {
   const d = new Date(date);
   d.setDate(d.getDate() - d.getDay());
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function startOfWeekDay(date, startDay = 0) {
+  const d = new Date(date);
+  const diff = (d.getDay() - startDay + 7) % 7;
+  d.setDate(d.getDate() - diff);
   d.setHours(0, 0, 0, 0);
   return d;
 }
@@ -209,6 +217,12 @@ export default function WeekCalendar() {
   const [activeListFilter, setActiveListFilter] = useState("all");
   const [dayAddModal, setDayAddModal] = useState(false);
 
+  const [daysAhead, setDaysAhead]       = useState(7);
+  const [datelessMode, setDatelessMode] = useState("always");
+  const [doneMode, setDoneMode]         = useState("strikethrough");
+  const [weekStartDay, setWeekStartDay] = useState(0);
+
+
   const today = new Date(); today.setHours(0, 0, 0, 0);
 
   //load from chrome storage
@@ -241,6 +255,16 @@ export default function WeekCalendar() {
       });
 
       setAllLists(found);
+
+      const prefs = result.preferencesSetData || {};
+      if (prefs.daysAhead !== undefined) setDaysAhead(Number(prefs.daysAhead));
+      if (prefs.datelessMode !== undefined) setDatelessMode(prefs.datelessMode);
+      if (prefs.doneMode !== undefined) setDoneMode(prefs.doneMode);
+      if (prefs.weekStart !== undefined) {
+        setWeekStartDay(Number(prefs.weekStart));
+        setWeekStart(startOfWeekDay(new Date(), Number(prefs.weekStart)));
+      }
+
     });
   }, []);
 
@@ -266,54 +290,78 @@ export default function WeekCalendar() {
     return d;
   });
 
-  //sorted tasks upto a certain day
+  const rangeEnd = new Date(selectedDay);
+  rangeEnd.setDate(rangeEnd.getDate() + daysAhead);
+  rangeEnd.setHours(0, 0, 0, 0);
+
   const allGroupedTasks = (() => {
-    const sevenDaysOut = new Date(today);
-    sevenDaysOut.setDate(today.getDate() + 7);
-    sevenDaysOut.setHours(23, 59, 59, 999);
+  const cutoffDays = new Date(today);
+  cutoffDays.setDate(today.getDate() + daysAhead);
+  cutoffDays.setHours(23, 59, 59, 999);
 
-    const isToday = sameDay(selectedDay, today);
-    const cutoff = isToday ? sevenDaysOut : new Date(selectedDay);
-    if (!isToday) cutoff.setHours(23, 59, 59, 999);
+  const isToday = sameDay(selectedDay, today);
+  const cutoff = new Date(selectedDay);
+  cutoff.setDate(cutoff.getDate() + daysAhead);
+  cutoff.setHours(23, 59, 59, 999);
 
-    const groups = [];
+  
 
-    allLists.forEach(list => {
-      list.todo.forEach(category => {
-        const relevant = (category.items || []).filter(item => {
-          const d = parseDate(item.date);
-          if (!d) return false;
-          d.setHours(0, 0, 0, 0);
-          if (item.done && d < today) return false;  // past + done: always hide
-          return d <= cutoff;
-        });
-        if (relevant.length > 0) {
-          groups.push({
-            listId: list.id,
-            listName: list.listName,
-            categoryName: category.name,
-            items: relevant,
-          });
+  const groups = [];
+  const undatedItems = [];
+
+  allLists.forEach(list => {
+    list.todo.forEach(category => {
+      const relevant = (category.items || []).filter(item => {
+        const d = parseDate(item.date);
+
+        if (!d) {
+          if (datelessMode === "separate") {
+            undatedItems.push({ ...item, listId: list.id, listName: list.listName, categoryName: category.name });
+          }
+          return datelessMode === "always";
         }
+
+        d.setHours(0, 0, 0, 0);
+        if (item.done && d < today) return false;
+        return d <= cutoff;
       });
+      if (relevant.length > 0) {
+        groups.push({
+          listId: list.id,
+          listName: list.listName,
+          categoryName: category.name,
+          items: relevant,
+        });
+      }
     });
+  });
 
-    groups.sort((a, b) => {
-      const minDate = arr =>
-        arr.reduce((best, item) => {
-          const d = parseDate(item.date);
-          return d && (!best || d < best) ? d : best;
-        }, null);
-      const da = minDate(a.items);
-      const db = minDate(b.items);
-      if (!da && !db) return 0;
-      if (!da) return 1;
-      if (!db) return -1;
-      return da - db;
+  groups.sort((a, b) => {
+    const minDate = arr =>
+      arr.reduce((best, item) => {
+        const d = parseDate(item.date);
+        return d && (!best || d < best) ? d : best;
+      }, null);
+    const da = minDate(a.items);
+    const db = minDate(b.items);
+    if (!da && !db) return 0;
+    if (!da) return 1;
+    if (!db) return -1;
+    return da - db;
+  });
+
+  // display pref for undated
+  if (datelessMode === "separate" && undatedItems.length > 0) {
+    groups.push({
+      listId: "undated",
+      listName: "",
+      categoryName: "Undated",
+      items: undatedItems,
     });
+  }
 
-    return groups;
-  })();
+  return groups;
+})();
 
   //category selection between dates and shown tasks
   const activeCategoryNames = [...new Set(allGroupedTasks.map(g => g.categoryName))];
@@ -351,6 +399,43 @@ export default function WeekCalendar() {
     saveList(listId, newTodo);
   };
 
+
+  const toggleSubtaskDone = (listId, categoryName, itemName, subIndex) => {
+    const list = allLists.find(l => l.id === listId);
+    if (!list) return;
+
+    const newTodo = list.todo.map(cat => {
+      if (cat.name !== categoryName) return cat;
+
+      return {
+        ...cat,
+        items: (cat.items || []).map(item => {
+          if (item.name !== itemName) return item;
+
+          const nextSubs = (item.subtasks || []).map((s, i) =>
+            i === subIndex ? { ...s, done: !s.done } : s
+          );
+
+          return { ...item, subtasks: nextSubs };
+        }),
+      };
+    });
+
+    saveList(listId, newTodo);
+  };
+  
+  const deleteTask = (listId, categoryName, itemName) => {
+    const list = allLists.find(l => l.id === listId);
+    if (!list) return;
+
+    const newTodo = list.todo.map(cat => {
+      if (cat.name !== categoryName) return cat;
+      return { ...cat, items: (cat.items || []).filter(item => item.name !== itemName) };
+    });
+
+    saveList(listId, newTodo);
+  };
+
   const handleAdd = ({ listId, categoryName }, newItem) => {
     const list = allLists.find(l => l.id === listId);
     if (!list) return;
@@ -370,7 +455,7 @@ export default function WeekCalendar() {
         {/* moving weeks buttons */}
         <div className="flex items-center justify-between mb-2 px-1">
           <button
-            onClick={() => { const prev = new Date(weekStart); prev.setDate(prev.getDate() - 7); setWeekStart(prev); }}
+            onClick={() => { const prev = new Date(weekStart); prev.setDate(prev.getDate() - 7); setWeekStart(startOfWeekDay(prev, weekStartDay)); }}
             className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors text-gray-600 dark:text-gray-400 text-xs leading-none"
           >
             ‹
@@ -379,7 +464,7 @@ export default function WeekCalendar() {
             {MONTHS[weekStart.getMonth()]} {weekStart.getFullYear()}
           </span>
           <button
-            onClick={() => { const next = new Date(weekStart); next.setDate(next.getDate() + 7); setWeekStart(next); }}
+            onClick={() => { const next = new Date(weekStart); next.setDate(next.getDate() + 7); setWeekStart(startOfWeekDay(next, weekStartDay)); }}
             className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors text-gray-600 dark:text-gray-400 text-xs leading-none"
           >
             ›
@@ -424,8 +509,9 @@ export default function WeekCalendar() {
       <div className="flex items-center gap-2 px-1">
         <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 shrink-0">
           {sameDay(selectedDay, today)
-            ? "Upcoming weeks tasks"
-            : `Tasks up to ${MONTHS[selectedDay.getMonth()]} ${selectedDay.getDate()}`}
+            ? `Tasks due in the next ${daysAhead} day${daysAhead !== 1 ? "s" : ""}`
+            : `Tasks due by ${MONTHS[rangeEnd.getMonth()]} ${rangeEnd.getDate()}`
+          }
         </span>
 
         <div className="flex-1 h-px bg-light-border dark:bg-dark-border" />
@@ -463,14 +549,25 @@ export default function WeekCalendar() {
       <div className="flex-1 overflow-y-auto pr-1 space-y-3">
         {groupedTasks.length === 0 ? (
           <div className="flex items-center justify-center h-24">
-            <span className="text-sm text-gray-400 dark:text-gray-500">No tasks due by this day.</span>
+            <span className="text-sm text-gray-400 dark:text-gray-500">
+              {sameDay(selectedDay, today)
+                ? `No tasks due in the next ${daysAhead} day${daysAhead !== 1 ? "s" : ""}.`
+                : `No tasks due by ${MONTHS[rangeEnd.getMonth()]} ${rangeEnd.getDate()}.`
+                }
+            </span>
           </div>
         ) : (
           groupedTasks.map((group, gi) => (
             <CategoryGroup
-              key={`${group.listId}-${group.categoryName}-${gi}`}
               group={group}
-              onToggle={(itemName) => toggleDone(group.listId, group.categoryName, itemName)}
+              doneMode={doneMode}
+              onToggleTask={(itemName) => toggleDone(group.listId, group.categoryName, itemName)}
+              onToggleSubtask={(itemName, subIndex) =>
+                toggleSubtaskDone(group.listId, group.categoryName, itemName, subIndex)
+              }
+              onDeleteTask={(itemName) =>
+                deleteTask(group.listId, group.categoryName, itemName)
+              }
               onAdd={() => setModal({ listId: group.listId, categoryName: group.categoryName })}
             />
           ))
@@ -498,9 +595,12 @@ export default function WeekCalendar() {
 }
 
 // tasks under each category
-function CategoryGroup({ group, onToggle, onAdd }) {
-  const [collapsed, setCollapsed] = useState(false);
+function CategoryGroup({ group, doneMode, onToggleTask, onToggleSubtask, onDeleteTask, onAdd }) {  const [collapsed, setCollapsed] = useState(false);
   const doneCount = group.items.filter(i => i.done).length;
+
+  // doneitems section for seperate
+  const undoneItems = group.items.filter(i => !i.done);
+  const doneItems   = group.items.filter(i => i.done);
 
   return (
     <div className="border border-light-border dark:border-dark-border rounded-lg overflow-hidden">
@@ -520,7 +620,7 @@ function CategoryGroup({ group, onToggle, onAdd }) {
           <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">
             {group.categoryName}
           </span>
-          {group.listName !== "To Do List" && (
+          {group.listName !== "To Do List" && group.listName !== "" && (
             <span className="ml-1.5 text-[10px] text-gray-400 dark:text-gray-500 normal-case tracking-normal">
               · {group.listName}
             </span>
@@ -546,16 +646,40 @@ function CategoryGroup({ group, onToggle, onAdd }) {
 
       {!collapsed && (
         <div className="divide-y divide-light-border dark:divide-dark-border">
-          {group.items.map((item, idx) => (
-            <TaskRow key={idx} item={item} onToggle={() => onToggle(item.name)} />
+          {(doneMode === "separate" ? undoneItems : group.items).map((item, idx) => (
+            <TaskRow
+              key={idx}
+              item={item}
+              onToggleTask={() => onToggleTask(item.name)}
+              onToggleSubtask={(subIndex) => onToggleSubtask(item.name, subIndex)}
+              onDelete={() => onDeleteTask(item.name)}
+            />
           ))}
+
+          {/* seperate done section */}
+          {doneMode === "separate" && doneItems.length > 0 && (
+            <>
+              <div className="px-3 py-1 bg-light-bg-sidebar dark:bg-dark-bg-sidebar">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Done</span>
+              </div>
+                {doneItems.map((item, idx) => (
+                  <TaskRow
+                    key={`done-${idx}`}
+                    item={item}
+                    onToggleTask={() => onToggleTask(item.name)}
+                    onToggleSubtask={(subIndex) => onToggleSubtask(item.name, subIndex)}
+                    onDelete={() => onDeleteTask(item.name)}
+                  />
+                ))}
+            </>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function TaskRow({ item, onToggle }) {
+function TaskRow({ item, onToggleTask, onToggleSubtask, onDelete }) {
   const [expanded, setExpanded] = useState(false);
   const deadline = parseDate(item.date);
   const today    = new Date(); today.setHours(0, 0, 0, 0);
@@ -566,7 +690,7 @@ function TaskRow({ item, onToggle }) {
 
       {/* done box, subtask toggle, and description outside of the rest */}
       <div className="flex items-start gap-2">
-        <button onClick={onToggle} className="mt-0.5 flex-shrink-0">
+        <button onClick={onToggleTask} className="mt-0.5 flex-shrink-0">
           {item.done
             ? <CheckSquare size={16} className="text-green-600 dark:text-green-400" />
             : <Square      size={16} className="text-gray-400" />}
@@ -610,7 +734,19 @@ function TaskRow({ item, onToggle }) {
           )}
         </div>
 
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors flex-shrink-0"
+          title="Delete task"
+        >
+          <Trash2 size={14} className="text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400" />
+        </button>
+
         {item.subtasks && item.subtasks.length > 0 && (
+          
           <button
             onClick={() => setExpanded(e => !e)}
             className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors flex-shrink-0"
@@ -622,14 +758,16 @@ function TaskRow({ item, onToggle }) {
         )}
       </div>
 
-      {/* Subtasks */}
+      {/* subtasks */}
       {expanded && item.subtasks && item.subtasks.length > 0 && (
         <div className="mt-2 ml-6 space-y-1 pl-3 border-l-2 border-gray-200 dark:border-gray-700">
           {item.subtasks.map((sub, si) => (
             <div key={si} className="flex items-center gap-2">
-              {sub.done
-                ? <CheckSquare size={14} className="text-green-600 dark:text-green-400 flex-shrink-0" />
-                : <Square      size={14} className="text-gray-400 flex-shrink-0" />}
+              <button onClick={(e) => {e.stopPropagation(); onToggleSubtask(si)}} className="flex-shrink-0">
+                {sub.done
+                  ? <CheckSquare size={14} className="text-green-600 dark:text-green-400" />
+                  : <Square size={14} className="text-gray-400" />}
+              </button>
               <span className={`text-xs text-gray-700 dark:text-gray-300 flex-1 ${sub.done ? "line-through opacity-60" : ""}`}>
                 {sub.name}
               </span>
