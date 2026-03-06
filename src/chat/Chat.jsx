@@ -1,15 +1,84 @@
-import { ChevronDown, Mic, SendHorizontal, Settings } from "lucide-react";
-import { useEffect, useState } from "react";
-import TodoList from "../components/todoList";
+import { useEffect, useState, useRef } from "react";
+import Sidebar from "../components/Sidebar";
+import ChatPanel from "../components/ChatPanel";
+import ListDetailsPanel from "../components/ListDetailsPanel";
 import { todoPlaintext, todoJSON } from "./navigator";
-import { TodoBasicSchema } from "../shared/todo_schema";
+import { isInjectionLike, extractValidatedTodo } from "./chat_helpers";
+import SpeechService from "./speech";
+
+  //
+  //  Hero text options
+  //
+  const HERO_GREETINGS = [
+    "What's on the schedule this week?",
+    "What are we tackling today?",
+    "What needs to get done?",
+    "What's the game plan?",
+    "What's on your plate?",
+    "What are we working with?",
+    "Hit me with the tasks.",
+    "Alright, what's the damage?",
+    "Let's get organized.",
+    "What chaos are we taming today?",
+    "Ready when you are.",
+    "What's the move?",
+    "Pour it out, I'll sort it.",
+    "Give me the rundown.",
+    "What's weighing on you?",
+  ];
+
+  const HERO_LOADING_START = [
+    "Processing your word vomit...",
+    "Decoding your stream of consciousness...",
+    "Turning your rambling into a plan...",
+    "One sec, translating human to todo...",
+    "Reading between the lines...",
+    "Extracting the tasks from the chaos...",
+    "Parsing your brain dump...",
+    "Sifting through the madness...",
+    "Making sense of all that...",
+    "Let me work my magic...",
+    "Alright, give me a second...",
+    "Crunching your thoughts...",
+    "Thinking about it really hard..."
+  ];
+
+  const HERO_LOADING_ALMOST = [
+    "Dang bro this week sucks...",
+    "Almost there, hang tight...",
+    "Okay wow you're busy...",
+    "Putting the finishing touches on...",
+    "You sure about all this?",
+    "This is... a lot. Respect.",
+    "Wrapping it up, one sec...",
+    "Do you even sleep?",
+    "Just dotting the i's...",
+    "I'm tired just reading this...",
+    "Polishing your master plan...",
+    "Good news: it's almost done. Bad news: you gotta do all this.",
+    "ur cooked dawg 🥀 "
+  ];
+
+  const randomFrom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
 
 export default function Chat() {
-  const [chatMode, setChatMode] = useState("query");
-  const [heroText, setHeroText] = useState("What's on the schedule this week?");
+  const [mainView, setMainView] = useState("chat"); // "chat" or "listDetail"
+  const [activeListName, setActiveListName] = useState(null);
+  const [chatMode, setChatMode] = useState("query");  // "query" or "result"
+  const [heroText, setHeroText] = useState(() => randomFrom(HERO_GREETINGS));
   const [query, setQuery] = useState("");
   const [responseList, setResponseList] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [pastQueries, setPastQueries] = useState([]);
+  const [availableLists, setAvailableLists] = useState([]);
+  const [selectedList, setSelectedList] = useState("");
+  const [contextToggle, setContextToggle] = useState(false);
+  const speechRef = useRef(null);
+  const [isListening, setIsListening] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState("");
+  const [responseListName, setResponseListName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
 
   //////////////////////////////////////////////////////////////////
@@ -21,7 +90,7 @@ export default function Chat() {
       if (result.darkMode !== undefined) {
         isDarkMode = result.darkMode;
       }
-      
+
       else {
         isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
       }
@@ -32,63 +101,123 @@ export default function Chat() {
   }, []);
 
 
+  ///////////////////////////////////////////
+  // Pull previously sent queries on mount //
+  ///////////////////////////////////////////
+  useEffect(() => {
+    chrome.storage?.local.get(["pastFiveQueries"], (result) => {
+      setPastQueries(result.pastFiveQueries || []);
+    });
+  }, []);
+
+
+  ///////////////////////////////
+  // Initialize speech service //
+  ///////////////////////////////
+  useEffect(() => {
+    speechRef.current = new SpeechService();
+
+    speechRef.current.onTranscript((text) => {
+      setLiveTranscript(text);
+      setQuery(text);
+    });
+
+    return () => {
+      speechRef.current?.stop();
+    };
+  }, []);
+
+
+  ////////////////////////////////////////////
+  // Load available lists from localStorage //
+  ////////////////////////////////////////////
+  useEffect(() => {
+    chrome.storage?.local.get(["todoData"], (result) => {
+      const data = result?.todoData || {};
+      const listNames = Object.keys(data);
+      setAvailableLists(listNames);
+    });
+  }, [refreshTrigger]);
+
+
   ////////////////////////////////
   // Send the user query to LLM //
   ////////////////////////////////
-const handleSend = async () => {
-  if (query.trim()) {
-    console.log("Sending:", query);
+  const handleSend = async () => {
+    if (!query.trim()) return;
+    setIsLoading(true);
 
-    setHeroText("Processing your word vomit...");
+    const isListSelected = selectedList !== "";
 
-    //  first we make one pass to OSS 120B to turn the user's ramblings 
-    // into a markdown-summarized list of what they need to do
-    const responsePlaintext = await todoPlaintext(query); 
+    let ctx_list;
+
+    if (isListSelected) {
+      const { todoData } = await chrome.storage.local.get("todoData");
+      ctx_list = todoData?.[selectedList];
+    }
+
+    if (isInjectionLike(query)) {
+      setHeroText("Nice try.");
+      return;
+    }
+
+    const updatedQueries = [query, ...pastQueries].slice(0, 5);
+    setPastQueries(updatedQueries);
+    chrome.storage?.local.set({ pastFiveQueries: updatedQueries });
+
+    setHeroText(randomFrom(HERO_LOADING_START));
+
+    const responsePlaintext = await todoPlaintext(query, ctx_list, contextToggle);
     const outputPlaintext = responsePlaintext.choices[0].message.content;
-    console.log(outputPlaintext);
 
-    setHeroText("Dang bro this week sucks...");
+    setHeroText(randomFrom(HERO_LOADING_ALMOST));
 
     let parsed;
 
-    // following this, we take the cleanly markdown-formatted list
-    // and we try to pass this back to OSS 120B in order to turn it from
-    // simple markdown formatting to our desired structured output, TodoBasicSchema
-    // sometimes the model fails and does not produce useful output, so we have this
-    // logic in a loop which will try multiple times if the output cannot be parsed correctly.
     for (let attempt = 0; attempt < 3; attempt++) {
       const responseJSON = await todoJSON(outputPlaintext);
-      console.log(responseJSON);
-
-      const outputJSON = responseJSON.output
-        .flatMap((o) => o.content)
-        .find((c) => c.type === "output_text").text;
-
-      console.log(outputJSON);
-
-      parsed = JSON.parse(outputJSON);
-
-      const validated = TodoBasicSchema.safeParse(parsed);
-      if (validated.success) {
-        parsed = validated.data;
+      const validated = extractValidatedTodo(responseJSON);
+      if (validated) {
+        parsed = validated;
         break;
       }
     }
 
-    // if we escape the loop, logic is valid and we're free to update state.
+    if (!parsed) {
+      setHeroText("Something broke. Wanna try that again?");
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(false);
     setResponseList(parsed.todo);
+    setResponseListName(parsed.name || "");
     setChatMode("result");
-    setHeroText("What's on the schedule this week?");
+    setHeroText(randomFrom(HERO_GREETINGS));
     setQuery("");
-  }
-};
+  };
+
 
   ////////////////////////
   // Handle voice input //
   ////////////////////////
   const handleMic = () => {
-    console.log("Mic clicked");
-    // TODO: Mic logic
+    if (!speechRef.current) return;
+
+    if (isListening) {
+      speechRef.current.stop();
+      setIsListening(false);
+
+      const finalTranscript = speechRef.current.getTranscript().trim();
+      if (finalTranscript) setQuery(finalTranscript);
+    }
+    
+    else {
+      speechRef.current.resetTranscript();
+      setLiveTranscript("");
+      speechRef.current.start();
+      setIsListening(true);
+    }
   };
 
 
@@ -106,43 +235,23 @@ const handleSend = async () => {
   /////////////////////////////////////////
   // Handler for response action buttons //
   /////////////////////////////////////////
-  const handleReplace = () => {
+  const handleReplace = (name) => {
     if (!responseList) return;
 
-    const todoData = { "To Do List": responseList };
-    chrome.storage?.local.set({ todoData }, () => {
-      setRefreshTrigger(prev => prev + 1);
-      setResponseList(null);
-      setChatMode("query");
-    });
-  };
+    const targetList = name || selectedList || "Your New List";
 
-  const handleAppend = () => {
-    if (!responseList) return;
+    chrome.storage?.local.get(["todoData", "todoTimestamps"], (result) => {
+      const todoData = result?.todoData || {};
+      todoData[targetList] = responseList;
 
-    chrome.storage?.local.get(["todoData"], (result) => {
-      const currentList = result?.todoData?.["To Do List"] || [];
-      const mergedList = [...currentList];
-
-      responseList.forEach(newCategory => {
-        const existingCategoryIndex = mergedList.findIndex(
-          cat => cat.name.toLowerCase() === newCategory.name.toLowerCase()
-        );
-
-        if (existingCategoryIndex >= 0) {
-          mergedList[existingCategoryIndex].items.push(...newCategory.items);
-        }
-        
-        else {
-          mergedList.push(newCategory);
-        }
-      });
-
-      const todoData = { "To Do List": mergedList};
-      chrome.storage?.local.set({ todoData }, () => {
+        const timestamps = result?.todoTimestamps || {};
+        timestamps[targetList] = Date.now();
+        chrome.storage?.local.set({ todoData, todoTimestamps: timestamps }, () => {
         setRefreshTrigger(prev => prev + 1);
         setResponseList(null);
         setChatMode("query");
+        setActiveListName(targetList);
+        setMainView("listDetail");
       });
     });
   };
@@ -150,148 +259,77 @@ const handleSend = async () => {
   const handleDiscard = () => {
     setResponseList(null);
     setChatMode("query");
+    setSelectedList("");
   };
 
+
+  //////////////////////////////////////////
+  // Sidebar callbacks for view switching //
+  //////////////////////////////////////////
+  const handleSelectList = (listName) => {
+    setActiveListName(listName);
+    setMainView("listDetail");
+  };
+
+  const handleSelectNewList = () => {
+    setActiveListName(null);
+    setMainView("chat");
+    setSelectedList("");
+  };
+
+  const showQueryWithContext = (listName) => {
+    setActiveListName(null);
+    setMainView("chat");
+    setSelectedList(listName);
+  };
+
+  ////////////
+  // Render //
+  ////////////
   return (
     <div className="flex h-screen w-screen flex-col">
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
+
         {/* Left Sidebar */}
-        <div className="w-[350px] p-4 border-r border-light-border dark:border-dark-border bg-light-bg-sidebar dark:bg-dark-bg-sidebar">
-          <TodoList key={refreshTrigger}/>
+        <div className="w-72 p-4 border-r border-light-border dark:border-dark-border bg-light-bg-sidebar dark:bg-dark-bg-sidebar">
+          <Sidebar key={refreshTrigger} onSelectList={handleSelectList} onSelectNewList={handleSelectNewList}/>
         </div>
 
-        {/* Right Side - Chat Area */}
-        <div className="flex flex-1 flex-col bg-light-bg dark:bg-dark-bg">
-          
-          {/* Top Bar */}
-          <div className="flex items-center justify-between px-6 py-4">
-            <h1 className="text-2xl font-bold text-primary">Canvas QoL</h1>
-            <button
-              onClick={() => {chrome.tabs.create({ url: chrome.runtime.getURL("options.html") });}}
-              className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
-              aria-label="Settings"
-            >
-              <Settings size={24} className="text-gray-600 dark:text-gray-400" />
-            </button>
-          </div>
-
-          {/* Center Content */}
-          <div className="flex flex-1 items-center justify-center">
-            {chatMode === "query" && (
-              <div className="flex w-full flex-col space-y-4 items-center mb-[150px]">
-                <span className="font-bold text-4xl text-primary text-center">{heroText}</span>
-                
-                {/* Input Container */}
-                <div className="bg-light-bg-sidebar dark:bg-dark-bg-sidebar border border-light-border dark:border-dark-border w-[60%] px-4 py-3 rounded-lg flex items-center gap-3">
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Type your message here..."
-                    className="flex-1 bg-transparent outline-none text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
-                  />
-                  
-                  {/* Icons */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleMic}
-                      className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
-                      aria-label="Voice input"
-                    >
-                      <Mic size={20} className="text-gray-600 dark:text-gray-200" />
-                    </button>
-                    
-                    <button
-                      onClick={handleSend}
-                      disabled={!query.trim()}
-                      className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      aria-label="Send message"
-                    >
-                      <SendHorizontal size={20} className="text-gray-600 dark:text-gray-200" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* List Context Selector */}
-                <div className="relative w-[200px] self-start ml-[20%]">
-                  <select
-                    className="w-full appearance-none bg-light-bg-sidebar dark:bg-dark-bg-sidebar border border-light-border dark:border-dark-border text-gray-800 dark:text-gray-200 p-2 rounded-lg outline-none cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
-                    defaultValue=""
-                  >
-                    <option value="" disabled>Talking about a list?</option>
-                    <option value="My Week">My Week</option>
-                    <option value="Dinosaur Paper">Dinosaur Paper</option>
-                    {/* TODO: List current to-do lists here */}
-                  </select>
-                  <ChevronDown size={20} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 dark:text-gray-200 pointer-events-none" />
-                </div>
-              </div>
-            )}
-
-            {chatMode === "result" && responseList && (
-              <div className="flex w-full flex-col space-y-4 items-center mb-[150px] max-w-4xl">
-                <span className="font-bold text-4xl text-primary text-center mb-2">Generated To-Do List</span>
-                
-                {/* Display the generated list */}
-                <div className="w-full max-h-[400px] overflow-y-auto bg-light-bg-sidebar dark:bg-dark-bg-sidebar border border-light-border dark:border-dark-border rounded-lg p-4">
-                  <div className="space-y-3">
-                    {responseList.map((category, catIdx) => (
-                      <div key={catIdx} className="space-y-2">
-                        <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
-                          {category.name}
-                        </h3>
-                        {category.items.map((item, itemIdx) => (
-                          <div key={itemIdx} className="bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-lg p-3">
-                            <div className="flex items-start gap-2">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                                    {item.name}
-                                  </span>
-                                  {item.time && (
-                                    <span className="text-xs bg-blue-500/20 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded">
-                                      ⏱ {item.time}
-                                    </span>
-                                  )}
-                                </div>
-                                {item.descr && <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{item.descr}</p>}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex gap-3 mt-6">
-                  <button
-                    onClick={handleReplace}
-                    className="px-6 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg transition-colors font-medium"
-                  >
-                    Replace List
-                  </button>
-                  <button
-                    onClick={handleAppend}
-                    className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
-                  >
-                    Append to List
-                  </button>
-                  <button
-                    onClick={handleDiscard}
-                    className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors font-medium"
-                  >
-                    Discard
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Right Side - Switches between Chat and List Detail */}
+        {mainView === "chat" ? (
+          <ChatPanel
+            chatMode={chatMode}
+            setChatMode={setChatMode}
+            heroText={heroText}
+            setHeroText={setHeroText}
+            query={query}
+            setQuery={setQuery}
+            lastQuery={pastQueries[0]}
+            responseList={responseList}
+            setResponseList={setResponseList}
+            availableLists={availableLists}
+            selectedList={selectedList}
+            setSelectedList={setSelectedList}
+            contextToggle={contextToggle}
+            setContextToggle={setContextToggle}
+            isListening={isListening}
+            handleMic={handleMic}
+            handleSend={handleSend}
+            handleKeyDown={handleKeyDown}
+            handleReplace={handleReplace}
+            handleDiscard={handleDiscard}
+            responseListName={responseListName}
+            isLoading={isLoading}
+          />
+        ) : (
+          <ListDetailsPanel
+            listName={activeListName}
+            showQueryWithContext={showQueryWithContext}
+            onListUpdated={() => setRefreshTrigger(prev => prev + 1)}
+          />
+        )}
       </div>
     </div>
-  )
+  );
 }
