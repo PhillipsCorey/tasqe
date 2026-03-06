@@ -15,7 +15,7 @@ export default {
       "primary-hover": "#5A6EAE",
       
       // Light mode backgrounds
-      "light-bg": "#EDF0F5",
+      "light-bg": "#F2F4F8",
       "light-bg-sidebar": "#E8ECF5",
       "light-border": "#D4DBE8",
       

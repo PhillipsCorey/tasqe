@@ -35,6 +35,49 @@ function startOfWeek(date) {
   return d;
 }
 
+function formatDueDate(dateStr) {
+  if (!dateStr) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const due = parseDate(dateStr);
+  if (!due) return null;
+
+  const diffMs = due - today;
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  let label;
+  let colorClass;
+
+  if (diffDays < 0) {
+    label = `${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? "s" : ""} overdue`;
+    colorClass = "bg-red-500/10 text-red-600 dark:text-red-400";
+  }
+
+  else if (diffDays === 0) {
+    label = "Today";
+    colorClass = "bg-orange-500/10 text-orange-600 dark:text-orange-400";
+  }
+
+  else if (diffDays === 1) {
+    label = "Tomorrow";
+    colorClass = "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400";
+  }
+
+  else if (diffDays <= 3) {
+    label = `In ${diffDays} days`;
+    colorClass = "bg-teal-500/10 text-teal-600 dark:text-teal-400";
+  }
+
+  else {
+    label = `In ${diffDays} days`;
+    colorClass = "bg-teal-500/5 text-teal-600 dark:text-teal-500";
+  }
+
+  return { label, colorClass };
+}
+
 
 function AddTaskModal({ categoryName, onAdd, onClose }) {
   const [name, setName]   = useState("");
@@ -559,7 +602,6 @@ function TaskRow({ item, onToggle }) {
   const [expanded, setExpanded] = useState(false);
   const deadline = parseDate(item.date);
   const today    = new Date(); today.setHours(0, 0, 0, 0);
-  const overdue  = deadline && deadline < today && !item.done;
 
   return (
     <div className="px-3 py-2 bg-white dark:bg-dark-bg">
@@ -586,21 +628,16 @@ function TaskRow({ item, onToggle }) {
                 Done
               </span>
             )}
-            {overdue && (
-              <span className="text-[10px] bg-red-500/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded">
-                Overdue
-              </span>
-            )}
             {item.time && (
-              <span className="flex items-center gap-1 text-[10px] bg-purple-500/10 text-purple-700 dark:text-purple-400 px-1.5 py-0.5 rounded">
+              <span className="flex items-center gap-1 text-[10px] bg-sky-500/10 text-sky-600 dark:text-sky-400 px-1.5 py-0.5 rounded">
                 <Clock size={10} />
                 {item.time}
               </span>
             )}
-            {item.date && (
-              <span className="flex items-center gap-1 text-[10px] bg-blue-500/10 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded">
+            {item.date && formatDueDate(item.date) && (
+              <span className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${formatDueDate(item.date).colorClass}`}>
                 <Calendar size={10} />
-                {item.date}
+                {formatDueDate(item.date).label}
               </span>
             )}
           </div>
@@ -634,7 +671,7 @@ function TaskRow({ item, onToggle }) {
                 {sub.name}
               </span>
               {sub.time && (
-                <span className="flex items-center gap-1 text-[10px] bg-purple-500/10 text-purple-700 dark:text-purple-400 px-1.5 py-0.5 rounded">
+                <span className="flex items-center gap-1 text-[10px] bg-sky-500/10 text-sky-600 dark:text-sky-400 px-1.5 py-0.5 rounded">
                   <Clock size={10} />
                   {sub.time}
                 </span>
