@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { BrainCircuit, ChevronDown, ChevronRight, Mic, SendHorizontal, Clock, Calendar, CheckSquare, Square } from "lucide-react";
+import { BrainCircuit, ChevronDown, ChevronRight, Mic, SendHorizontal, Clock, Calendar, CheckSquare, Square, Loader2 } from "lucide-react";
 
 
 export default function ChatPanel({
   chatMode, setChatMode, heroText, query, setQuery, responseList, responseListName,
-  setResponseList, availableLists, selectedList, setSelectedList, contextToggle,
+  setResponseList, availableLists, selectedList, setSelectedList, contextToggle, isLoading,
   setContextToggle,lastQuery, handleMic, handleSend, handleKeyDown, handleReplace, handleDiscard,
 }) {
   const [expandedCategories, setExpandedCategories] = useState(new Set());
@@ -155,7 +155,10 @@ export default function ChatPanel({
       <div className="flex flex-1 items-center justify-center">
         {chatMode === "query" && (
           <div className="flex w-full flex-col space-y-5 items-center mb-32">
-            <span className="font-bold text-4xl text-primary text-center">{heroText}</span>
+            <div className="flex items-center justify-center gap-3">
+              {isLoading && <Loader2 size={28} className="text-primary animate-spin mt-1" />}
+              <span className="font-bold text-4xl text-primary text-center">{heroText}</span>
+            </div>
 
             {/* Input Container */}
             <div className="bg-light-bg-sidebar dark:bg-dark-bg-sidebar border border-light-border dark:border-dark-border w-[60%] px-4 pt-3 rounded-lg flex flex-col gap-3">
@@ -164,8 +167,9 @@ export default function ChatPanel({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type your message here..."
-                className="w-full mt-2 bg-transparent outline-none text-gray-800 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 resize-none min-h-[24px] max-h-[200px]"
+                disabled={isLoading}
+                placeholder={isLoading ? "Hang on..." : "Type your message here..."}
+                className={`w-full mt-2 bg-transparent outline-none text-gray-800 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 resize-none min-h-[24px] max-h-[200px] ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                 rows={1}
                 onInput={(e) => {
                   e.target.style.height = 'auto';
@@ -177,8 +181,9 @@ export default function ChatPanel({
               <div className="flex items-center justify-between -mt-2 mb-2">
                 {/* Toggle */}
                 <button
-                  onClick={() => setContextToggle(!contextToggle)}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
+                    onClick={() => !isLoading && setContextToggle(!contextToggle)}
+                    disabled={isLoading}
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors ${isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} ${
                     contextToggle 
                       ? 'bg-primary/10 text-primary hover:bg-primary/20' 
                       : 'text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
@@ -207,7 +212,8 @@ export default function ChatPanel({
 
                   <button
                     onClick={handleMic}
-                    className="p-1.5 hover:bg-gray-300 dark:hover:bg-gray-700 rounded-md transition-colors"
+                    disabled={isLoading}
+                    className={`p-1.5 hover:bg-gray-300 dark:hover:bg-gray-700 rounded-md transition-colors ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                     aria-label="Voice input"
                   >
                     <Mic size={20} className="text-gray-600 dark:text-gray-300" />
@@ -215,7 +221,7 @@ export default function ChatPanel({
 
                   <button
                     onClick={handleSend}
-                    disabled={!query.trim()}
+                    disabled={!query.trim() || isLoading}
                     className="p-1.5 hover:bg-gray-300 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Send message"
                   >

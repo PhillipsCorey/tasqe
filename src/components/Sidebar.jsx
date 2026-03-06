@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Plus, Search, Settings } from "lucide-react";
+import { Plus, ScrollText, Search, Settings } from "lucide-react";
 import ListRowItem from "./ListRowItem";
 
 
@@ -312,7 +312,7 @@ export default function Sidebar({ onSelectList, onSelectNewList }) {
           className="flex items-center gap-1.5 flex-1 px-1 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
           title="Preferences"
         >
-          <Settings size={14} className="text-gray-600 dark:text-gray-400" />
+          <ScrollText size={14} className="text-gray-600 dark:text-gray-400" />
           Preferences
         </button>
       </div>

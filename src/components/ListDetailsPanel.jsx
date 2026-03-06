@@ -30,18 +30,10 @@ export default function ListDetailPanel({ listName, onListUpdated, showQueryWith
       const list = data[listName] || [];
       setCategories(list);
 
-      // Default: expand all categories
+      // Default: expand all categories, collapse all tasks
       const allIndices = new Set(list.map((_, idx) => idx));
       setExpandedCategories(allIndices);
-
-      // Default: expand all tasks
-      const allTaskKeys = new Set();
-      list.forEach((cat, catIdx) => {
-        cat.items.forEach((_, itemIdx) => {
-          allTaskKeys.add(`${catIdx}-${itemIdx}`);
-        });
-      });
-      setExpandedTasks(allTaskKeys);
+      setExpandedTasks(new Set());
     });
   }, [listName]);
 
@@ -86,19 +78,10 @@ export default function ListDetailPanel({ listName, onListUpdated, showQueryWith
 
   const expandAll = () => {
     setExpandedCategories(new Set(categories.map((_, idx) => idx)));
-
-    const allTaskKeys = new Set();
-    categories.forEach((cat, catIdx) => {
-      cat.items.forEach((_, itemIdx) => {
-        allTaskKeys.add(`${catIdx}-${itemIdx}`);
-      });
-    });
-    setExpandedTasks(allTaskKeys);
   };
 
   const collapseAll = () => {
     setExpandedCategories(new Set());
-    setExpandedTasks(new Set());
   };
 
 
@@ -113,6 +96,35 @@ export default function ListDetailPanel({ listName, onListUpdated, showQueryWith
       else newSet.add(key);
       return newSet;
     });
+  };
+
+  ///////////////////////////////////////////
+  // Expand all tasks within a category   //
+  //////////////////////////////////////////
+  const expandCategoryTasks = (catIdx) => {
+    setExpandedTasks((prev) => {
+      const newSet = new Set(prev);
+      categories[catIdx].items.forEach((_, itemIdx) => {
+        newSet.add(`${catIdx}-${itemIdx}`);
+      });
+      return newSet;
+    });
+  };
+
+  const collapseCategoryTasks = (catIdx) => {
+    setExpandedTasks((prev) => {
+      const newSet = new Set(prev);
+      categories[catIdx].items.forEach((_, itemIdx) => {
+        newSet.delete(`${catIdx}-${itemIdx}`);
+      });
+      return newSet;
+    });
+  };
+
+  const areCategoryTasksExpanded = (catIdx) => {
+    return categories[catIdx].items.every((_, itemIdx) =>
+      expandedTasks.has(`${catIdx}-${itemIdx}`)
+    );
   };
 
 
@@ -363,10 +375,35 @@ export default function ListDetailPanel({ listName, onListUpdated, showQueryWith
     const diffMs = due - today;
     const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffDays < 0) return `${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? "s" : ""} ago`;
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Tomorrow";
-    return `${diffDays} days`;
+    let label;
+    let colorClass;
+
+    if (diffDays < 0) {
+      label = `${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? "s" : ""} overdue`;
+      colorClass = "bg-red-500/10 text-red-600 dark:text-red-400";
+    }
+
+    else if (diffDays === 0) {
+      label = "Today";
+      colorClass = "bg-orange-500/10 text-orange-600 dark:text-orange-400";
+    }
+
+    else if (diffDays === 1) {
+      label = "Tomorrow";
+      colorClass = "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400";
+    }
+
+    else if (diffDays <= 3) {
+      label = `In ${diffDays} days`;
+      colorClass = "bg-teal-500/10 text-teal-600 dark:text-teal-400";
+    }
+
+    else {
+      label = `In ${diffDays} days`;
+      colorClass = "bg-teal-500/5 text-teal-600 dark:text-teal-500";
+    }
+
+    return { label, colorClass };
   };
 
 
@@ -384,19 +421,19 @@ export default function ListDetailPanel({ listName, onListUpdated, showQueryWith
         <div className="flex items-center gap-2">
           <button
             onClick={expandAll}
-            className="px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
+            className="px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
           >
             Expand All
           </button>
           <button
             onClick={collapseAll}
-            className="px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
+            className="px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
           >
             Collapse All
           </button>
           <button
             onClick={editList}
-            className="px-2.5 py-1 text-xs font-medium text-gray-300 bg-primary hover:bg-primary-hover rounded-md transition-colors"
+            className="px-2.5 py-1 text-xs font-medium text-white dark:text-gray-100 bg-primary hover:bg-primary-hover rounded-md transition-colors"
           >
             Edit with tasqe
           </button>
@@ -477,12 +514,24 @@ export default function ListDetailPanel({ listName, onListUpdated, showQueryWith
 
                   {!isEditingCat && (
                     <div
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-1"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500">
+                      <span className="text-[10px] font-medium text-gray-400 dark:text-gray-400 mr-1">
                         {stats.done}/{stats.total}
                       </span>
+                      {isExpanded && category.items.length > 0 && (
+                        <button
+                          onClick={() =>
+                            areCategoryTasksExpanded(catIdx)
+                              ? collapseCategoryTasks(catIdx)
+                              : expandCategoryTasks(catIdx)
+                          }
+                          className="px-1.5 py-0.5 text-[10px] font-medium text-gray-400 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                        >
+                          {areCategoryTasksExpanded(catIdx) ? "Collapse Tasks" : "Expand Tasks"}
+                        </button>
+                      )}
                       <button
                         onClick={() => startEditingCategory(catIdx)}
                         className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
@@ -511,7 +560,7 @@ export default function ListDetailPanel({ listName, onListUpdated, showQueryWith
                       return (
                         <div
                           key={itemIdx}
-                          className="border border-light-border dark:border-dark-border rounded-lg p-3 bg-white dark:bg-dark-bg"
+                          className="border border-light-border dark:border-dark-border rounded-lg p-3 bg-gray-50 dark:bg-dark-bg"
                         >
                           {isEditing ? (
 
@@ -598,22 +647,22 @@ export default function ListDetailPanel({ listName, onListUpdated, showQueryWith
                                       {item.name}
                                     </span>
 
-                                    {item.date && (
-                                      <span className="flex items-center gap-1 text-[10px] bg-blue-500/10 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded">
+                                    {item.date && formatDueDate(item.date) && (
+                                      <span className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${formatDueDate(item.date).colorClass}`}>
                                         <Calendar size={10} />
-                                        {formatDueDate(item.date)}
+                                        {formatDueDate(item.date).label}
                                       </span>
                                     )}
 
                                     {item.time && (
-                                      <span className="flex items-center gap-1 text-[10px] bg-purple-500/10 text-purple-700 dark:text-purple-400 px-1.5 py-0.5 rounded">
+                                      <span className="flex items-center gap-1 text-[10px] bg-sky-500/10 text-sky-600 dark:text-sky-400 px-1.5 py-0.5 rounded">
                                         <Clock size={10} />
                                         {item.time}
                                       </span>
                                     )}
 
                                     {subStats && (
-                                      <span className={`text-[10px] text-gray-400 dark:text-gray-500 ${!item.date && !item.time ? "mt-1" : ""}`}>
+                                      <span className={`text-[10px] text-gray-400 dark:text-gray-400 ${!item.date && !item.time ? "mt-1" : ""}`}>
                                         {subStats.done}/{subStats.total} subtasks
                                       </span>
                                     )}
