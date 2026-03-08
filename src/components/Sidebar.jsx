@@ -152,7 +152,9 @@ export default function Sidebar({ onSelectList, onSelectNewList, onOpenPreferenc
     onSelectList?.(listName);
   };
 
-
+  ////////////////////
+  // Calendar View //
+  ///////////////////
   const handleCalendar = () => {
     onOpenCalendar?.();
   };
