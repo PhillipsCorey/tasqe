@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Plus, ChevronDown, ChevronRight, CheckSquare, Square, Clock, Calendar, Trash2 } from "lucide-react";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
+const MONTHS_FULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 function parseDate(dateStr) {
   if (!dateStr) return null;
@@ -43,12 +43,157 @@ function startOfWeekDay(date, startDay = 0) {
   return d;
 }
 
+function formatDueDate(dateStr) {
+  if (!dateStr) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const due = parseDate(dateStr);
+  if (!due) return null;
+
+  const diffMs = due - today;
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  let label;
+  let colorClass;
+
+  if (diffDays < 0) {
+    label = `${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? "s" : ""} overdue`;
+    colorClass = "bg-red-500/10 text-red-600 dark:text-red-400";
+  }
+
+  else if (diffDays === 0) {
+    label = "Today";
+    colorClass = "bg-orange-500/10 text-orange-600 dark:text-orange-400";
+  }
+
+  else if (diffDays === 1) {
+    label = "Tomorrow";
+    colorClass = "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400";
+  }
+
+  else if (diffDays <= 3) {
+    label = `In ${diffDays} days`;
+    colorClass = "bg-teal-500/10 text-teal-600 dark:text-teal-400";
+  }
+
+  else {
+    label = `In ${diffDays} days`;
+    colorClass = "bg-teal-500/5 text-teal-600 dark:text-teal-500";
+  }
+
+  return { label, colorClass };
+}
+
+
+function MonthView({ allLists, weekStartDay }) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [hoveredDay, setHoveredDay] = useState(null);
+  const [lockedDay, setLockedDay] = useState(null);
+
+  const tasksByDate = {};
+  allLists.forEach(list => {
+    list.todo.forEach(cat => {
+      (cat.items || []).forEach(item => {
+        const d = parseDate(item.date);
+        if (!d) return;
+        d.setHours(0, 0, 0, 0);
+        const key = d.toDateString();
+        if (!tasksByDate[key]) tasksByDate[key] = [];
+        tasksByDate[key].push({ taskName: item.name, listName: list.listName });
+      });
+    });
+  });
+
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const firstOfMonth = new Date(year, month, 1);
+  const gridStart = startOfWeekDay(firstOfMonth, weekStartDay);
+  const cells = Array.from({ length: 42 }, (_, i) => {
+    const d = new Date(gridStart);
+    d.setDate(gridStart.getDate() + i);
+    return d;
+  });
+  const dayHeaders = Array.from({ length: 7 }, (_, i) => DAYS[(weekStartDay + i) % 7]);
+
+  return (
+    <div className="flex flex-col h-full gap-2" onClick={() => setLockedDay(null)}>
+      <div className="flex items-center justify-between px-1">
+        <button onClick={() => setCursor(new Date(year, month - 1, 1))}
+          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors text-gray-600 dark:text-gray-400 text-xs leading-none">‹</button>
+        <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{MONTHS_FULL[month]} {year}</span>
+        <button onClick={() => setCursor(new Date(year, month + 1, 1))}
+          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors text-gray-600 dark:text-gray-400 text-xs leading-none">›</button>
+      </div>
+
+      <div className="grid grid-cols-7 gap-px">
+        {dayHeaders.map(d => (
+          <div key={d} className="text-center text-[10px] font-semibold text-gray-400 dark:text-gray-500 py-1">{d}</div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-px flex-1 relative" style={{ gridAutoRows: "min-content" }}>
+        {cells.map((day, i) => {
+          const isCurrentMonth = day.getMonth() === month;
+          const isToday = sameDay(day, today);
+          const key = day.toDateString();
+          const tasks = tasksByDate[key] || [];
+          const hasDot = tasks.length > 0;
+    
+          return (
+            <div key={i}
+              className="relative flex flex-col items-center pt-1 pb-0.5 rounded-md cursor-default select-none"
+              onMouseEnter={() => !lockedDay && setHoveredDay(day)}
+              onMouseLeave={() => !lockedDay && setHoveredDay(null)}
+              onClick={(e) => { e.stopPropagation(); setLockedDay(prev => prev && sameDay(prev, day) ? null : day); }}
+            >
+              <span className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full transition-colors
+                ${isToday ? "bg-primary text-white"
+                  : isCurrentMonth ? "text-gray-700 dark:text-gray-200"
+                  : "text-gray-300 dark:text-gray-600"}`}>
+                {day.getDate()}
+              </span>
+              <span className={`mt-0.5 w-1 h-1 rounded-full ${hasDot ? "bg-primary" : "bg-transparent"}`} />
+            </div>
+          );
+        })}
+      </div>
+        <div className="border-t border-light-border dark:border-dark-border pt-2 flex-1 overflow-y-auto" onMouseLeave={() => !lockedDay && setHoveredDay(null)}>
+        {(lockedDay || hoveredDay) ? (
+          <>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1.5 px-1 flex items-center gap-1.5">
+              {MONTHS[(lockedDay || hoveredDay).getMonth()]} {(lockedDay || hoveredDay).getDate()}
+              {lockedDay && <span className="text-[9px] bg-primary/10 text-primary px-1 py-0.5 rounded">pinned</span>}
+            </div>
+            {(tasksByDate[(lockedDay || hoveredDay).toDateString()] || []).length === 0 ? (
+              <span className="text-xs text-gray-400 dark:text-gray-500 px-1">No tasks due.</span>
+            ) : (
+              <div className="space-y-1">
+                {(tasksByDate[(lockedDay || hoveredDay).toDateString()] || []).map((t, i) => (
+                  <div key={i} className="flex items-center justify-between px-2 py-1 rounded-md bg-light-bg-sidebar dark:bg-dark-bg-sidebar">
+                    <span className="text-xs text-gray-700 dark:text-gray-200 truncate">{t.taskName}</span>
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-2 shrink-0">{t.listName}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <span className="text-xs text-gray-400 dark:text-gray-500 px-1">Hover a day to see tasks.</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 function AddTaskModal({ categoryName, onAdd, onClose }) {
-  const [name, setName]   = useState("");
+  const [name, setName]  = useState("");
   const [descr, setDescr] = useState("");
-  const [time, setTime]   = useState("");
-  const [date, setDate]   = useState("");
+  const [time, setTime]  = useState("");
+  const [date, setDate]  = useState("");
 
   const handleSubmit = () => {
     if (!name.trim()) return;
@@ -209,7 +354,7 @@ function DayAddModal({ allLists, selectedDay, onAdd, onClose }) {
   );
 }
 
-export default function WeekCalendar() {
+export default function WeekCalendar({onClose}) {
   const [allLists, setAllLists] = useState([]);
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const [selectedDay, setSelectedDay] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; });
@@ -221,6 +366,7 @@ export default function WeekCalendar() {
   const [datelessMode, setDatelessMode] = useState("always");
   const [doneMode, setDoneMode]         = useState("strikethrough");
   const [weekStartDay, setWeekStartDay] = useState(0);
+  const [calView, setCalView] = useState("week"); 
 
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -448,7 +594,7 @@ export default function WeekCalendar() {
 
   const totalTaskCount = groupedTasks.reduce((s, g) => s + g.items.length, 0);
 
-  return (
+  const inner = (
     <div className="flex flex-col h-full gap-3">
 
       <div className="bg-light-bg-sidebar dark:bg-dark-bg-sidebar border border-light-border dark:border-dark-border rounded-lg px-2 py-2">
@@ -503,6 +649,7 @@ export default function WeekCalendar() {
             );
           })}
         </div>
+
       </div>
 
       {/* date below week */}
@@ -592,6 +739,34 @@ export default function WeekCalendar() {
       )}
     </div>
   );
+
+  if (onClose) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="bg-white dark:bg-gray-800 border border-light-border dark:border-dark-border rounded-lg shadow-xl w-96 h-[600px] flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-light-border dark:border-dark-border flex-shrink-0">
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">Views</span>
+            <button onClick={onClose} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors text-gray-500 dark:text-gray-400 text-lg leading-none">✕</button>
+          </div>
+          <div className="flex border-b border-light-border dark:border-dark-border flex-shrink-0">
+            {["week", "month"].map(v => (
+              <button key={v} onClick={() => setCalView(v)}
+                className={`flex-1 py-2 text-xs font-semibold capitalize transition-colors
+                  ${calView === v ? "text-primary border-b-2 border-primary -mb-px" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                {v}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 overflow-hidden px-4 py-3">
+            {calView === "week" ? inner : <MonthView allLists={allLists} weekStartDay={weekStartDay} />}
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return inner;
+
+
 }
 
 // tasks under each category
@@ -683,7 +858,6 @@ function TaskRow({ item, onToggleTask, onToggleSubtask, onDelete }) {
   const [expanded, setExpanded] = useState(false);
   const deadline = parseDate(item.date);
   const today    = new Date(); today.setHours(0, 0, 0, 0);
-  const overdue  = deadline && deadline < today && !item.done;
 
   return (
     <div className="px-3 py-2 bg-white dark:bg-dark-bg">
@@ -710,21 +884,16 @@ function TaskRow({ item, onToggleTask, onToggleSubtask, onDelete }) {
                 Done
               </span>
             )}
-            {overdue && (
-              <span className="text-[10px] bg-red-500/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded">
-                Overdue
-              </span>
-            )}
             {item.time && (
-              <span className="flex items-center gap-1 text-[10px] bg-purple-500/10 text-purple-700 dark:text-purple-400 px-1.5 py-0.5 rounded">
+              <span className="flex items-center gap-1 text-[10px] bg-sky-500/10 text-sky-600 dark:text-sky-400 px-1.5 py-0.5 rounded">
                 <Clock size={10} />
                 {item.time}
               </span>
             )}
-            {item.date && (
-              <span className="flex items-center gap-1 text-[10px] bg-blue-500/10 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded">
+            {item.date && formatDueDate(item.date) && (
+              <span className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${formatDueDate(item.date).colorClass}`}>
                 <Calendar size={10} />
-                {item.date}
+                {formatDueDate(item.date).label}
               </span>
             )}
           </div>
@@ -772,7 +941,7 @@ function TaskRow({ item, onToggleTask, onToggleSubtask, onDelete }) {
                 {sub.name}
               </span>
               {sub.time && (
-                <span className="flex items-center gap-1 text-[10px] bg-purple-500/10 text-purple-700 dark:text-purple-400 px-1.5 py-0.5 rounded">
+                <span className="flex items-center gap-1 text-[10px] bg-sky-500/10 text-sky-600 dark:text-sky-400 px-1.5 py-0.5 rounded">
                   <Clock size={10} />
                   {sub.time}
                 </span>

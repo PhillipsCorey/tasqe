@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { Plus, Search, Settings } from "lucide-react";
+import { Plus, ScrollText, Search, Settings, Calendar } from "lucide-react";
 import ListRowItem from "./ListRowItem";
 
 
-export default function Sidebar({ onSelectList, onSelectNewList, onOpenPreferences  }) {
+export default function Sidebar({ onSelectList, onSelectNewList, onOpenPreferences, onOpenCalendar}) {
   const [allLists, setAllLists] = useState({});
   const [favorites, setFavorites] = useState(new Set());
   const [hoveredList, setHoveredList] = useState(null);
@@ -150,6 +150,11 @@ export default function Sidebar({ onSelectList, onSelectNewList, onOpenPreferenc
   ///////////////////
   const handleSelectList = (listName) => {
     onSelectList?.(listName);
+  };
+
+
+  const handleCalendar = () => {
+    onOpenCalendar?.();
   };
 
 
@@ -312,8 +317,16 @@ export default function Sidebar({ onSelectList, onSelectNewList, onOpenPreferenc
           className="flex items-center gap-1.5 flex-1 px-1 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
           title="Preferences"
         >
-          <Settings size={14} className="text-gray-600 dark:text-gray-400" />
+          <ScrollText size={14} className="text-gray-600 dark:text-gray-400" />
           Preferences
+        </button>
+        <button
+          onClick={handleCalendar}
+          className="flex items-center gap-1.5 flex-1 px-1 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
+          title="Calendar View"
+        >
+          <Calendar size={14} className="text-gray-600 dark:text-gray-400" />
+          Calendar
         </button>
       </div>
 

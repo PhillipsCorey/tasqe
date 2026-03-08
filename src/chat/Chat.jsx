@@ -5,14 +5,70 @@ import ListDetailsPanel from "../components/ListDetailsPanel";
 import { todoPlaintext, todoJSON } from "./navigator";
 import { isInjectionLike, extractValidatedTodo } from "./chat_helpers";
 import SpeechService from "./speech";
+import WeekCalendar from "../components/calendar";
 import PrefModal from "../components/PrefModal";
+
+  //
+  //  Hero text options
+  //
+  const HERO_GREETINGS = [
+    "What's on the schedule this week?",
+    "What are we tackling today?",
+    "What needs to get done?",
+    "What's the game plan?",
+    "What's on your plate?",
+    "What are we working with?",
+    "Hit me with the tasks.",
+    "Alright, what's the damage?",
+    "Let's get organized.",
+    "What chaos are we taming today?",
+    "Ready when you are.",
+    "What's the move?",
+    "Pour it out, I'll sort it.",
+    "Give me the rundown.",
+    "What's weighing on you?",
+  ];
+
+  const HERO_LOADING_START = [
+    "Processing your word vomit...",
+    "Decoding your stream of consciousness...",
+    "Turning your rambling into a plan...",
+    "One sec, translating human to todo...",
+    "Reading between the lines...",
+    "Extracting the tasks from the chaos...",
+    "Parsing your brain dump...",
+    "Sifting through the madness...",
+    "Making sense of all that...",
+    "Let me work my magic...",
+    "Alright, give me a second...",
+    "Crunching your thoughts...",
+    "Thinking about it really hard..."
+  ];
+
+  const HERO_LOADING_ALMOST = [
+    "Dang bro this week sucks...",
+    "Almost there, hang tight...",
+    "Okay wow you're busy...",
+    "Putting the finishing touches on...",
+    "You sure about all this?",
+    "This is... a lot. Respect.",
+    "Wrapping it up, one sec...",
+    "Do you even sleep?",
+    "Just dotting the i's...",
+    "I'm tired just reading this...",
+    "Polishing your master plan...",
+    "Good news: it's almost done. Bad news: you gotta do all this.",
+    "ur cooked dawg 🥀 "
+  ];
+
+  const randomFrom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 
 export default function Chat() {
   const [mainView, setMainView] = useState("chat"); // "chat" or "listDetail"
   const [activeListName, setActiveListName] = useState(null);
   const [chatMode, setChatMode] = useState("query");  // "query" or "result"
-  const [heroText, setHeroText] = useState("What's on the schedule this week?");
+  const [heroText, setHeroText] = useState(() => randomFrom(HERO_GREETINGS));
   const [query, setQuery] = useState("");
   const [responseList, setResponseList] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -24,7 +80,9 @@ export default function Chat() {
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [responseListName, setResponseListName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [showPrefModal, setShowPrefModal] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   //////////////////////////////////////////////////////////////////
   // Check browswer or OS dark mode prefrence and default to that //
@@ -90,6 +148,7 @@ export default function Chat() {
   ////////////////////////////////
   const handleSend = async () => {
     if (!query.trim()) return;
+    setIsLoading(true);
 
     const isListSelected = selectedList !== "";
 
@@ -109,12 +168,12 @@ export default function Chat() {
     setPastQueries(updatedQueries);
     chrome.storage?.local.set({ pastFiveQueries: updatedQueries });
 
-    setHeroText("Processing your word vomit...");
+    setHeroText(randomFrom(HERO_LOADING_START));
 
     const responsePlaintext = await todoPlaintext(query, ctx_list, contextToggle);
     const outputPlaintext = responsePlaintext.choices[0].message.content;
 
-    setHeroText("Dang bro this week sucks...");
+    setHeroText(randomFrom(HERO_LOADING_ALMOST));
 
     let parsed;
 
@@ -128,15 +187,16 @@ export default function Chat() {
     }
 
     if (!parsed) {
-      setHeroText("Couldn't parse the response. Try again.");
-      
+      setHeroText("Something broke. Wanna try that again?");
+      setIsLoading(false);
       return;
     }
 
+    setIsLoading(false);
     setResponseList(parsed.todo);
     setResponseListName(parsed.name || "");
     setChatMode("result");
-    setHeroText("What's on the schedule this week?");
+    setHeroText(randomFrom(HERO_GREETINGS));
     setQuery("");
   };
 
@@ -236,7 +296,7 @@ export default function Chat() {
 
         {/* Left Sidebar */}
         <div className="w-72 p-4 border-r border-light-border dark:border-dark-border bg-light-bg-sidebar dark:bg-dark-bg-sidebar">
-          <Sidebar key={refreshTrigger} onSelectList={handleSelectList} onSelectNewList={handleSelectNewList} onOpenPreferences={() => setShowPrefModal(true)}/>
+          <Sidebar key={refreshTrigger} onSelectList={handleSelectList} onSelectNewList={handleSelectNewList} onOpenPreferences={() => setShowPrefModal(true)} onOpenCalendar={() => setShowCalendar(true)} />
         </div>
 
         {/* Right Side - Switches between Chat and List Detail */}
@@ -263,6 +323,7 @@ export default function Chat() {
             handleReplace={handleReplace}
             handleDiscard={handleDiscard}
             responseListName={responseListName}
+            isLoading={isLoading}
           />
         ) : (
           <ListDetailsPanel
@@ -274,6 +335,9 @@ export default function Chat() {
       </div>
       {showPrefModal && (
         <PrefModal onClose={() => setShowPrefModal(false)} />
+      )}
+       {showCalendar && (
+        <WeekCalendar onClose={() => setShowCalendar(false)} />
       )}
     </div>
   );
