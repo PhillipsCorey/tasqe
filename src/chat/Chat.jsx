@@ -5,6 +5,8 @@ import ListDetailsPanel from "../components/ListDetailsPanel";
 import { todoPlaintext, todoJSON } from "./navigator";
 import { isInjectionLike, extractValidatedTodo } from "./chat_helpers";
 import SpeechService from "./speech";
+import WeekCalendar from "../components/calendar";
+import PrefModal from "../components/PrefModal";
 
   //
   //  Hero text options
@@ -79,7 +81,8 @@ export default function Chat() {
   const [liveTranscript, setLiveTranscript] = useState("");
   const [responseListName, setResponseListName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
+  const [showPrefModal, setShowPrefModal] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   //////////////////////////////////////////////////////////////////
   // Check browswer or OS dark mode prefrence and default to that //
@@ -293,7 +296,7 @@ export default function Chat() {
 
         {/* Left Sidebar */}
         <div className="w-72 p-4 border-r border-light-border dark:border-dark-border bg-light-bg-sidebar dark:bg-dark-bg-sidebar">
-          <Sidebar key={refreshTrigger} onSelectList={handleSelectList} onSelectNewList={handleSelectNewList}/>
+          <Sidebar key={refreshTrigger} onSelectList={handleSelectList} onSelectNewList={handleSelectNewList} onOpenPreferences={() => setShowPrefModal(true)} onOpenCalendar={() => setShowCalendar(true)} />
         </div>
 
         {/* Right Side - Switches between Chat and List Detail */}
@@ -330,6 +333,12 @@ export default function Chat() {
           />
         )}
       </div>
+      {showPrefModal && (
+        <PrefModal onClose={() => setShowPrefModal(false)} />
+      )}
+       {showCalendar && (
+        <WeekCalendar onClose={() => setShowCalendar(false)} />
+      )}
     </div>
   );
 }

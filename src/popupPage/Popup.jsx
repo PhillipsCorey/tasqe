@@ -1,15 +1,32 @@
 import { Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import WeekCalendar from "../components/Calendar";
-import FirstTimeSetup from "../components/Setup";
+import Setup from "../components/Setup";
 
 export default function Popup() {
   const [showSetup, setShowSetup] = useState(true);
 
-  const handleSetupComplete = () => {
-    chrome.storage?.local.set({ preferencesSet: true });
-    setShowSetup(false);
+  const handleSetupComplete = (lists, prefs) => {
+  const todoData = {};
+  lists.forEach(list => {
+    if (!list.name.trim()) return;
+    const categories = list.categories
+      .filter(c => c.trim())
+      .map(c => ({ name: c, items: [] }));
+    todoData[list.name.trim()] = categories.length > 0 ? categories : [{ name: "General", items: [] }];
+  });
+
+  const preferences = {
+      daysAhead: prefs?.daysAhead ?? 7,
+      datelessMode: prefs?.datelessMode ?? "always",
+      doneMode: prefs?.doneMode ?? "strikethrough",
+      weekStart: prefs?.weekStart ?? 0,
   };
+
+  chrome.storage?.local.set({ todoData, preferencesSet: true, preferencesSetData: preferences }, () => {
+    setShowSetup(false);
+  });
+};
 
   useEffect(() => {
     chrome.storage?.local.get(["darkMode", "preferencesSet"], (result) => {
@@ -49,12 +66,9 @@ export default function Popup() {
       </div>
 
       {/* TodoList Component */}
-      {/* <div className="flex flex-1 flex-col px-4 py-3 overflow-hidden">
-        <WeekCalendar />
-      </div> */}
       <div className="flex flex-1 flex-col px-4 py-3 overflow-hidden">
         {showSetup ? (
-          <FirstTimeSetup onComplete={handleSetupComplete} />
+          <Setup onComplete={handleSetupComplete} />
         ) : (
           <WeekCalendar />
         )}

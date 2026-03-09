@@ -11,7 +11,7 @@ A Chrome Web Extension aimed at first-generation university students, aiming to 
 
 ## 2: Install dependencies
 ```
-cd Canvas_QoL
+cd tasqe
 npm i
 ```
 
