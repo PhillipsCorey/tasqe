@@ -97,10 +97,35 @@ export default function ChatPanel({
     const diffMs = due - today;
     const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffDays < 0) return `${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? "s" : ""} ago`;
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Tomorrow";
-    return `${diffDays} days`;
+    let label;
+    let colorClass;
+
+    if (diffDays < 0) {
+      label = `${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? "s" : ""} overdue`;
+      colorClass = "bg-red-500/10 text-red-600 dark:text-red-400";
+    }
+
+    else if (diffDays === 0) {
+      label = "Today";
+      colorClass = "bg-orange-500/10 text-orange-600 dark:text-orange-400";
+    }
+
+    else if (diffDays === 1) {
+      label = "Tomorrow";
+      colorClass = "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400";
+    }
+
+    else if (diffDays <= 3) {
+      label = `In ${diffDays} days`;
+      colorClass = "bg-teal-500/10 text-teal-600 dark:text-teal-400";
+    }
+
+    else {
+      label = `In ${diffDays} days`;
+      colorClass = "bg-teal-500/5 text-teal-600 dark:text-teal-500";
+    }
+
+    return { label, colorClass };
   };
 
 
@@ -306,15 +331,15 @@ export default function ChatPanel({
                                       {item.name}
                                     </span>
 
-                                    {item.date && (
-                                      <span className="flex items-center gap-1 text-[10px] bg-blue-500/10 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded">
+                                    {item.date && formatDueDate(item.date) && (
+                                      <span className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${formatDueDate(item.date).colorClass}`}>
                                         <Calendar size={10} />
-                                        {formatDueDate(item.date)}
+                                        {formatDueDate(item.date).label}
                                       </span>
                                     )}
 
                                     {item.time && (
-                                      <span className="flex items-center gap-1 text-[10px] bg-purple-500/10 text-purple-700 dark:text-purple-400 px-1.5 py-0.5 rounded">
+                                      <span className="flex items-center gap-1 text-[10px] bg-sky-500/10 text-sky-600 dark:text-sky-400 px-1.5 py-0.5 rounded">
                                         <Clock size={10} />
                                         {item.time}
                                       </span>

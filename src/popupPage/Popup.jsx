@@ -1,6 +1,6 @@
 import { Settings } from "lucide-react";
 import { useEffect, useState } from "react";
-import WeekCalendar from "../components/Calendar";
+import WeekCalendar from "../components/calendar";
 import Setup from "../components/Setup";
 
 export default function Popup() {
