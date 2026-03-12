@@ -14,11 +14,11 @@ async function run() {
     sourcemap: true,
   };
 
-  await esbuild({
-    ...common,
-    entryPoints: ["src/background/serviceWorker.js"],
-    outfile: "dist/background.js",
-  });
+  // await esbuild({
+  //   ...common,
+  //   entryPoints: ["src/background/serviceWorker.js"],
+  //   outfile: "dist/background.js",
+  // });
 
   // await esbuild({
   //   ...common,
@@ -26,12 +26,12 @@ async function run() {
   //   outfile: "dist/content.js",
   // });
 
-  await esbuild({
-    ...common,
-    format: "iife",
-    entryPoints: ["src/content/content.js"],
-    outfile: "dist/content.js",
-  });
+  // await esbuild({
+  //   ...common,
+  //   format: "iife",
+  //   entryPoints: ["src/content/content.js"],
+  //   outfile: "dist/content.js",
+  // });
 
   // await esbuild({
   //   ...common,

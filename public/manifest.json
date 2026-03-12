@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "tasqe",
-  "version": "0.6.9",
+  "version": "0.7.0",
   "description": "An extension to aid students in managing big tasks and their week as a whole.",
   "action": {
     "default_popup": "popup.html"
@@ -11,14 +11,7 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["storage", "notifications", "alarms"],
-  "host_permissions": ["<all_urls>"],
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"]
-    }
-  ],
+  "permissions": ["storage"],
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",
