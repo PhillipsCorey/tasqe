@@ -7,6 +7,7 @@ import { isInjectionLike, extractValidatedTodo } from "./chat_helpers";
 import SpeechService from "./speech";
 import WeekCalendar from "../components/calendar";
 import PrefModal from "../components/PrefModal";
+import PrefCalendar from "../components/prefCalendar";
 
   //
   //  Hero text options
@@ -296,7 +297,7 @@ export default function Chat() {
 
         {/* Left Sidebar */}
         <div className="w-72 p-4 border-r border-light-border dark:border-dark-border bg-light-bg-sidebar dark:bg-dark-bg-sidebar">
-          <Sidebar key={refreshTrigger} onSelectList={handleSelectList} onSelectNewList={handleSelectNewList} onOpenPreferences={() => setShowPrefModal(true)} onOpenCalendar={() => setShowCalendar(true)} />
+          <Sidebar key={refreshTrigger} onSelectList={handleSelectList} onSelectNewList={handleSelectNewList} onOpenPreferences={() => setShowPrefModal(true)} onOpenCalendar={() => setMainView("calendar")} />
         </div>
 
         {/* Right Side - Switches between Chat and List Detail */}
@@ -325,6 +326,8 @@ export default function Chat() {
             responseListName={responseListName}
             isLoading={isLoading}
           />
+        ) : mainView === "calendar" ? (
+          <PrefCalendar/>
         ) : (
           <ListDetailsPanel
             listName={activeListName}
@@ -335,9 +338,6 @@ export default function Chat() {
       </div>
       {showPrefModal && (
         <PrefModal onClose={() => setShowPrefModal(false)} />
-      )}
-       {showCalendar && (
-        <WeekCalendar onClose={() => setShowCalendar(false)} />
       )}
     </div>
   );

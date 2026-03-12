@@ -8,20 +8,25 @@ export default function PrefModal({ onClose }) {
   const [doneMode, setDoneMode] = useState("strikethrough");
   const [weekStart, setWeekStart] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const [listColors, setListColors] = useState({});
+  const [listNames, setListNames] = useState([]);
 
   useEffect(() => {
-    chrome.storage?.local.get(["preferencesSetData"], (result) => {
+    chrome.storage?.local.get(["preferencesSetData", "todoData"], (result) => {
         const prefs = result?.preferencesSetData || {};
         if (prefs.daysAhead !== undefined)    setDaysAhead(Number(prefs.daysAhead));
         if (prefs.datelessMode !== undefined) setDatelessMode(prefs.datelessMode);
         if (prefs.doneMode !== undefined)     setDoneMode(prefs.doneMode);
         if (prefs.weekStart !== undefined)    setWeekStart(Number(prefs.weekStart));
+        const names = Object.keys(result?.todoData || {});
+        setListNames(names);
+        setListColors(prefs.listColors || {});
         setLoaded(true);
     });
   }, []);
 
   const handleSave = () => {
-    const preferences = { daysAhead, datelessMode, doneMode, weekStart };
+    const preferences = { daysAhead, datelessMode, doneMode, weekStart, listColors };
     chrome.storage?.local.set({ preferencesSetData: preferences }, () => {
       onClose();
     });
@@ -105,6 +110,26 @@ export default function PrefModal({ onClose }) {
                 <option key={i} value={i}>{day}</option>
               ))}
             </select>
+          </div>
+
+          <div className="h-px bg-light-border dark:bg-dark-border" />
+
+          <div className="space-y-2">
+            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">List colors</span>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">Click a swatch to change a list's calendar color.</p>
+            <div className="space-y-2">
+              {listNames.map(name => (
+                <div key={name} className="flex items-center justify-between">
+                  <span className="text-xs text-gray-700 dark:text-gray-300 truncate flex-1 mr-3">{name}</span>
+                  <input
+                    type="color"
+                    value={listColors[name] || "#3b82f6"}
+                    onChange={e => setListColors(prev => ({ ...prev, [name]: e.target.value }))}
+                    className="w-7 h-7 rounded cursor-pointer border border-light-border dark:border-dark-border bg-transparent"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
         </div>

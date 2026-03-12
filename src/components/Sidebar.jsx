@@ -293,7 +293,7 @@ export default function Sidebar({ onSelectList, onSelectNewList, onOpenPreferenc
 
       {/* Title and Collapse Button */}
       <div className="flex items-center justify-between px-2 py-1">
-        <span className="text-3xl font-bold text-primary tracking-tight">tasqe</span>
+        <img src="/tasqe_logo.png" alt="tasqe" className="h-8" />
       </div>
 
       {/* Action Buttons */}
