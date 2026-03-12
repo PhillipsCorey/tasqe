@@ -118,7 +118,7 @@ export default function Options() {
           
           {/* Header */}
           <div className="flex flex-col items-center gap-2">
-            <img src="/tasqe_logo.png" alt="tasqe" className="h-10" />
+            <img src="/tasqe_logo.png" alt="tasqe" className="h-10 ml-4" />
             <h1 className="text-3xl font-bold text-primary">Settings</h1>
           </div>
 
