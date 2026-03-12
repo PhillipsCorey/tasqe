@@ -59,7 +59,7 @@ export default function Popup() {
     <div className="w-96 h-[600px] flex flex-col bg-light-bg dark:bg-dark-bg">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-light-border dark:border-dark-border">
-        <h1 className="text-xl font-bold text-primary">tasqe</h1>
+        <img src="/tasqe_logo.png" alt="tasqe" className="h-6" />
         <button onClick={openOptions} className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors">
           <Settings size={20} className="text-gray-600 dark:text-gray-400" />
         </button>
