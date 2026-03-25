@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { Plus, ScrollText, Search, Settings, Calendar } from "lucide-react";
+import { Plus, ScrollText, Search, Settings, Calendar, MessageSquarePlus } from "lucide-react";
 import ListRowItem from "./ListRowItem";
 
 
-export default function Sidebar({ onSelectList, onSelectNewList, onOpenPreferences, onOpenCalendar}) {
+export default function Sidebar({ onSelectList, onSelectNewList, onNewList, onOpenPreferences, onOpenCalendar}) {
   const [allLists, setAllLists] = useState({});
   const [favorites, setFavorites] = useState(new Set());
   const [hoveredList, setHoveredList] = useState(null);
@@ -76,11 +76,19 @@ export default function Sidebar({ onSelectList, onSelectNewList, onOpenPreferenc
   };
 
 
+  ///////////////////
+  // Open new chat //
+  ///////////////////
+  const handleNewChat = () => {
+    onSelectNewList?.();
+  };
+
+
   //////////////////////
   // Create new list //
   /////////////////////
   const handleNewList = () => {
-    onSelectNewList?.();
+    onNewList?.();
   };
 
 
@@ -299,12 +307,12 @@ export default function Sidebar({ onSelectList, onSelectNewList, onOpenPreferenc
       {/* Action Buttons */}
       <div className="flex flex-col py-4">
         <button
-          onClick={handleNewList}
+          onClick={handleNewChat}
           className="flex items-center gap-1.5 flex-1 px-1 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
           title="New list"
         >
-          <Plus size={14} />
-          New List
+          <MessageSquarePlus size={14} />
+          New Chat
         </button>
         <button
           onClick={handleSearch}
@@ -329,6 +337,14 @@ export default function Sidebar({ onSelectList, onSelectNewList, onOpenPreferenc
         >
           <Calendar size={14} className="text-gray-600 dark:text-gray-400" />
           Calendar
+        </button>
+        <button
+          onClick={handleNewList}
+          className="flex items-center gap-1.5 flex-1 px-1 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
+          title="New list"
+        >
+          <Plus size={14} />
+          New List
         </button>
       </div>
 
@@ -414,7 +430,10 @@ export default function Sidebar({ onSelectList, onSelectNewList, onOpenPreferenc
       {/* Settings button */}
       <div className="pt-2">
         <button
-          onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL("options.html") })}
+          onClick={() => {
+            chrome.tabs.create({ url: chrome.runtime.getURL("options.html") });
+            window.close();
+          }}
           className="flex items-center gap-1.5 px-2 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
         >
           <Settings size={14} className="text-gray-600 dark:text-gray-400" />

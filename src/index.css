@@ -85,4 +85,13 @@
   .dark *::-webkit-scrollbar-thumb:hover {
     background: rgba(200, 200, 200, 0.35);
   }
+
+  @keyframes mic-pulse {
+    0%, 100% { color: #ef4444; }
+    50% { color: #9ca3af; }
+  }
+
+  .mic-recording {
+    animation: mic-pulse 1s ease-in-out infinite;
+  }
 }
