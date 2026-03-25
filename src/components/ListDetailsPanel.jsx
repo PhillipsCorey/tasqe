@@ -445,13 +445,44 @@ export default function ListDetailPanel({ listName, onListUpdated, showQueryWith
 
         {categories.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full">
-            <span className="text-sm text-gray-500 dark:text-gray-400">This list is empty.</span>
-            <button
-              onClick={() => setAddingCategory(true)}
-              className="text-sm text-primary underline hover:text-primary-hover cursor-pointer mt-1"
-            >
-              Add a category
-            </button>
+            {addingCategory ? (
+              <div className="flex items-center gap-2 w-64">
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAddCategory();
+                    if (e.key === "Escape") { setAddingCategory(false); setNewCategoryName(""); }
+                  }}
+                  placeholder="Category name..."
+                  className="flex-1 bg-transparent border border-light-border dark:border-dark-border text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 rounded-lg outline-none"
+                  autoFocus
+                />
+                <button
+                  onClick={handleAddCategory}
+                  className="p-2 bg-primary hover:bg-primary-hover text-white rounded-lg transition-colors"
+                >
+                  <Check size={16} />
+                </button>
+                <button
+                  onClick={() => { setAddingCategory(false); setNewCategoryName(""); }}
+                  className="p-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <span className="text-sm text-gray-500 dark:text-gray-400">This list is empty.</span>
+                <button
+                  onClick={() => setAddingCategory(true)}
+                  className="text-sm text-primary underline hover:text-primary-hover cursor-pointer mt-1"
+                >
+                  Add a category
+                </button>
+              </>
+            )}
           </div>
         ) : (
           categories.map((category, catIdx) => {

@@ -5,7 +5,7 @@ import { BrainCircuit, ChevronDown, ChevronRight, Mic, SendHorizontal, Clock, Ca
 export default function ChatPanel({
   chatMode, setChatMode, heroText, query, setQuery, responseList, responseListName,
   setResponseList, availableLists, selectedList, setSelectedList, contextToggle, isLoading,
-  setContextToggle,lastQuery, handleMic, handleSend, handleKeyDown, handleReplace, handleDiscard,
+  setContextToggle,lastQuery, handleMic, handleSend, handleKeyDown, handleReplace, handleDiscard, isListening
 }) {
   const [expandedCategories, setExpandedCategories] = useState(new Set());
   const [expandedTasks, setExpandedTasks] = useState(new Set());
@@ -241,7 +241,7 @@ export default function ChatPanel({
                     className={`p-1.5 hover:bg-gray-300 dark:hover:bg-gray-700 rounded-md transition-colors ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                     aria-label="Voice input"
                   >
-                    <Mic size={20} className="text-gray-600 dark:text-gray-300" />
+                    <Mic size={20} className={isListening ? "mic-recording" : "text-gray-600 dark:text-gray-300"} />
                   </button>
 
                   <button

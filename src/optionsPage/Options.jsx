@@ -1,4 +1,4 @@
-import { Moon, Sun, Download, Upload } from "lucide-react";
+import { Moon, Sun, Download, Upload, ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function Options() {
@@ -117,9 +117,23 @@ export default function Options() {
         <div className="max-w-2xl mx-auto space-y-6">
           
           {/* Header */}
-          <div className="flex flex-col items-center gap-2">
-            <img src="/tasqe_logo.png" alt="tasqe" className="h-10 ml-4" />
+          <div className="flex justify-center w-full items-center gap-2">
+            <img src="/tasqe_logo.png" alt="tasqe" className="h-10 ml-4 mb-[1px]" />
             <h1 className="text-3xl font-bold text-primary">Settings</h1>
+          </div>
+
+          {/* Back to Chat */}
+          <div className="flex justify-start">
+            <button
+              onClick={() => {
+                chrome.tabs.create({ url: chrome.runtime.getURL("chat.html") })
+                window.close();
+            }}
+              className="flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-primary hover:bg-gray-200 dark:hover:bg-gray-700 px-2 py-1 rounded-lg transition-colors"
+            >
+              <ArrowLeft size={16} />
+              Back to Chat
+            </button>
           </div>
 
           {/* Dark Mode Toggle */}
@@ -165,7 +179,7 @@ export default function Options() {
 
           {/* Debug Section */}
           <div className="bg-light-bg-sidebar dark:bg-dark-bg-sidebar border border-light-border dark:border-dark-border rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Debug Tools</h2>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">List Data</h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Export or import your todo list data</p>
             <div className="flex gap-3">
               <button
