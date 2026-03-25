@@ -212,6 +212,18 @@ export default function Options() {
             </div>
           </div>
 
+          <div className="bg-light-bg-sidebar dark:bg-dark-bg-sidebar border border-light-border dark:border-dark-border rounded-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Need a tasqe tutorial?</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Watch our quick tutorial on how you can utilize the tasqe features</p>
+              </div>
+              <a href="https://www.youtube.com/watch?v=aFJ7EHuG9_k" target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg transition-colors font-medium text-sm">
+                Watch Tutorial
+              </a>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
