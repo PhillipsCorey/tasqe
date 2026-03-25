@@ -287,6 +287,32 @@ export default function Chat() {
     setSelectedList(listName);
   };
 
+  const handleNewBlankList = () => {
+    const name = "Untitled List";
+
+    chrome.storage?.local.get(["todoData", "todoTimestamps"], (result) => {
+      const todoData = result?.todoData || {};
+      const timestamps = result?.todoTimestamps || {};
+
+      // Avoid name collisions
+      let finalName = name;
+      let counter = 1;
+      while (todoData[finalName]) {
+        finalName = `${name} ${counter}`;
+        counter++;
+      }
+
+      todoData[finalName] = [];
+      timestamps[finalName] = Date.now();
+
+      chrome.storage?.local.set({ todoData, todoTimestamps: timestamps }, () => {
+        setRefreshTrigger(prev => prev + 1);
+        setActiveListName(finalName);
+        setMainView("listDetail");
+      });
+    });
+  };
+
   ////////////
   // Render //
   ////////////
@@ -297,7 +323,14 @@ export default function Chat() {
 
         {/* Left Sidebar */}
         <div className="w-72 p-4 border-r border-light-border dark:border-dark-border bg-light-bg-sidebar dark:bg-dark-bg-sidebar">
-          <Sidebar key={refreshTrigger} onSelectList={handleSelectList} onSelectNewList={handleSelectNewList} onOpenPreferences={() => setShowPrefModal(true)} onOpenCalendar={() => setMainView("calendar")} />
+          <Sidebar
+            key={refreshTrigger}
+            onSelectList={handleSelectList}
+            onSelectNewList={handleSelectNewList}
+            onOpenPreferences={() => setShowPrefModal(true)}
+            onOpenCalendar={() => setMainView("calendar")}
+            onNewList={handleNewBlankList}
+          />
         </div>
 
         {/* Right Side - Switches between Chat and List Detail */}

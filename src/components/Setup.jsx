@@ -5,24 +5,32 @@ import { Plus, Trash2 } from "lucide-react";
 function IntroPage({ onNext }) {
   return (
     <div className="flex flex-col h-full justify-between py-4">
-      {/* initial place for intro, navigator key explain, whatever */}
       <div className="flex flex-col gap-4">
         <span className="text-2xl font-bold text-primary tracking-tight">Welcome to tasqe</span>
         <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-          tasqe is your personal task manager built to keep you on top of what matters. Before you get started, we'll help you set things up so tasqe works the way you do.
+          tasqe is a task manager built for students — keeping your assignments, deadlines, and projects organized in one place. With a clean calendar view, structured lists, and an AI brain-dump feature that helps you figure out how to actually tackle what's incoming.
         </p>
         <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-          This will only take a moment.
+          New here? A getting started tutorial is available in Settings if you need it.
         </p>
       </div>
 
-      <button
-        onClick={onNext}
-        className="w-full bg-primary hover:bg-primary-hover text-white py-2 rounded-lg transition-colors text-sm font-medium"
-      >
-        Get Started
-      </button>
-
+      <div className="flex flex-col gap-2">
+        <a
+          href="https://www.youtube.com/watch?v=aFJ7EHuG9_k"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full border border-primary text-primary hover:bg-primary hover:text-white py-2 rounded-lg transition-colors text-sm font-medium text-center"
+        >
+          Watch Tutorial
+        </a>
+        <button
+          onClick={onNext}
+          className="w-full bg-primary hover:bg-primary-hover text-white py-2 rounded-lg transition-colors text-sm font-medium"
+        >
+          Get Started
+        </button>
+      </div>
     </div>
   );
 }
