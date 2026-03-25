@@ -5,15 +5,25 @@ import { Plus, Trash2 } from "lucide-react";
 function IntroPage({ onNext }) {
   return (
     <div className="flex flex-col h-full justify-between py-4">
-      {/* initial place for intro, navigator key explain, whatever */}
       <div className="flex flex-col gap-4">
         <span className="text-2xl font-bold text-primary tracking-tight">Welcome to tasqe</span>
         <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-          tasqe is your personal task manager built to keep you on top of what matters. Before you get started, we'll help you set things up so tasqe works the way you do.
+          tasqe is a task manager built for students — keeping your assignments, deadlines, and projects organized in one place. With a clean calendar view, structured lists, and an AI brain-dump feature that helps you figure out how to actually tackle what's coming up, staying on top of your work has never felt this manageable.
         </p>
         <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-          This will only take a moment.
+          Before you dive in, we'll help you get set up in just a moment.
         </p>
+        <a
+          href="https://www.youtube.com/watch?v=aFJ7EHuG9_k"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 text-xs text-primary hover:underline"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 shrink-0">
+            <path d="M19.615 3.184C18.005 2.95 12 2.95 12 2.95s-6.005 0-7.615.234C3.18 3.39 2.25 4.32 2.016 5.53 1.782 6.74 1.782 9.27 1.782 12s.234 5.26.468 6.47c.234 1.21 1.164 2.14 2.369 2.346C6.029 21.05 12 21.05 12 21.05s6.005 0 7.615-.234c1.205-.206 2.135-1.136 2.369-2.346.234-1.21.234-3.74.234-6.47s0-5.26-.234-6.47c-.234-1.21-1.164-2.14-2.369-2.346zM9.75 15.02V8.98L15.5 12l-5.75 3.02z"/>
+          </svg>
+          Watch the getting started guide
+        </a>
       </div>
 
       <button
@@ -22,7 +32,6 @@ function IntroPage({ onNext }) {
       >
         Get Started
       </button>
-
     </div>
   );
 }
